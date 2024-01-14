@@ -3,9 +3,10 @@ import numpy as np
 from sortedcontainers import SortedDict
 import itertools
 import time
-from logger import init_logger
-
-logger = init_logger("./logs/oba.log")
+import logging
+#from logger import init_logger
+#
+#logger = init_logger("./logs/oba.log")
 
 def get_data(date, test=False):
     if test:
@@ -50,6 +51,7 @@ def aggregate_order_book(dict_orders):
     a = a.rename(columns={"price": "ask", "quantity": "ask_quantity"})
 
     b = b.loc[:, ["bid_quantity", "bid"]].copy()
+    a = a.loc[:, ["ask_quantity", "ask"]].copy()
 
     return b, a
 
@@ -90,9 +92,19 @@ def get_n_levels(n, bid_dict, ask_dict):
 
 
 def process_order_updates(df):
+    """ Processes dataframe consisting of order book updates and returns each update with 5 levels
+    of the order book on both sides
+
+    Args:
+        df (pd.DataFrame) : each row is order book update
+
+    Returns:
+        data (list of dicts)
+    """
     curr_orders = {}
     bid_dict = SortedDict()
     ask_dict = SortedDict()
+    data=[]
 
     for index, row in df.iterrows():
         action = row["action"]
@@ -108,7 +120,7 @@ def process_order_updates(df):
             elif side == "a":
                 ask_dict[price] = ask_dict.get(price, 0) + quantity
             else:
-                logger.error(f"Order id {ord_id} has incorrect side input")
+                logging.error(f"Order id {ord_id} has incorrect side input")
                 continue
 
             new_order = {
@@ -122,7 +134,7 @@ def process_order_updates(df):
         elif action == "d":
             curr_ord = curr_orders.get(ord_id, None)
             if not curr_ord:
-                logger.error(f"Can't delete Order id {ord_id}; not in the data")
+                logging.error(f"Can't delete Order id {ord_id}; not in the data")
                 continue
 
             #TODO: take side, price and quantity from current order
@@ -135,13 +147,13 @@ def process_order_updates(df):
                 if ask_dict[price] == 0:
                     del ask_dict[price]
             else:
-                logger.error(f"Order id {ord_id} has incorrect side input")
+                logging.error(f"Order id {ord_id} has incorrect side input")
                 continue
             del curr_orders[ord_id]
         elif action == "m":
             curr_ord = curr_orders.get(ord_id, None)
             if not curr_ord:
-                logger.error(f"Order id {ord_id} not in the data")
+                logging.error(f"Order id {ord_id} not in the data")
                 continue
 
             curr_side = curr_ord["side"]
@@ -165,7 +177,7 @@ def process_order_updates(df):
             elif side == "a":
                 ask_dict[price] = ask_dict.get(price, 0) + quantity
             else:
-                logger.error(f"Order id {ord_id} has incorrect side input")
+                logging.error(f"Order id {ord_id} has incorrect side input")
                 continue
 
             new_order = {
@@ -178,37 +190,33 @@ def process_order_updates(df):
             curr_orders[ord_id] = new_order
 
         out_dict = get_n_levels(5, bid_dict, ask_dict)
-        print(out_dict)
+        #print(out_dict)
 
-        # temp_dict = {'timestamp' : row['timestamp'],
-        #             'price' : row['price'],
-        #             'side' : row['side'],}
+        temp_dict = {'timestamp' : timestamp,
+                     'price' : price,
+                     'side' : side,}
 
-        # for x in prices:
-        #    temp_dict[x] = np.nan
+        final_dict = {**temp_dict,**out_dict}
+        data.append(final_dict)
 
-        # for x in quants:
-        #    temp_dict[x] = 0
-
-        # data.append(temp_dict)
-
-    # ob = pd.DataFrame(data)
-    # return ob
-    return curr_orders, out_dict
+    #return data, curr_orders
+    return data
 
 
 if __name__ == "__main__":
 
     input_dates = ["20190610","20190611", "20190612","20190613", "20190614"]
     datestr = "20190614"
-    logger.info(f"Started Order Book Analysis Run for {datestr}")
+    logging.info(f"Started Order Book Analysis Run for {datestr}")
 
-    df_res = get_data(datestr, test=False)
+    df_res = get_data(datestr, test=True)
 
     start = time.time()
-    last_order_dict, last_level_dict = process_order_updates(df_res)
+    #out, last_order_dict = process_order_updates(df_res)
+    out = process_order_updates(df_res)
     end = time.time()
     print(f"Run time {end - start} sec")
 
-    b,a = aggregate_order_book(last_order_dict)
-    print_ob_dict(last_level_dict)
+    #last_level_dict = out[-1]
+    #b,a = aggregate_order_book(last_order_dict)
+    #print_ob_dict(last_level_dict)
