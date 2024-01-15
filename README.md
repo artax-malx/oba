@@ -1,3 +1,7 @@
+[![PyPI](https://img.shields.io/pypi/v/danger-python)](https://pypi.org/project/danger-python/)
+![Python versions](https://img.shields.io/pypi/pyversions/danger-python)
+[![Build Status](https://travis-ci.org/danger/python.svg?branch=master)](https://travis-ci.org/danger/python)
+
 OBA
 ====
 
@@ -6,11 +10,19 @@ output for research and model fitting.
 
 Note that all code has to be run from the root directory
 
+### Requirements
+
+Running `danger-python` requires:
+
+* Python 3.10 (tested under Python 3.10.13)
+
+### Installation
 * Install all the required libraries using the requirements file:
 ```console
 python3 -m pip install -r requirements.txt
 ```
 
+### Running code
 * Run tests from the root directory with command:
 ```console
 python3 -m pytest tests
