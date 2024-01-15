@@ -1,11 +1,13 @@
+MY_PYTHON3=/usr/local/bin/python3.10
+
 requirements:
-	python3 -m pip install -r requirements.txt
+	$(MY_PYTHON3) -m pip install -r requirements.txt
 
 test:
-	python3 -m pytest tests/ -rx
+	$(MY_PYTHON3) -m pytest tests/ -rx
 
 orderbook:
-	python3 generate_order_book.py
+	$(MY_PYTHON3) generate_order_book.py
 
 updatereq:
-	python3 -m pip freeze > requirements.txt
+	$(MY_PYTHON3) -m pip freeze > requirements.txt

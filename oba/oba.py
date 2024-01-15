@@ -168,6 +168,8 @@ def process_order_updates(df):
             curr_price = curr_ord["price"]
             curr_quantity = curr_ord["quantity"]
 
+            # Modify by the deleting the original order
+            # and adding the new order
             if curr_side == "b":
                 bid_dict[curr_price] = bid_dict.get(curr_price, 0) - curr_quantity
                 if bid_dict[curr_price] == 0:
@@ -177,8 +179,8 @@ def process_order_updates(df):
                 if ask_dict[curr_price] == 0:
                     del ask_dict[curr_price]
             else:
-                # TODO: In theory not necessary to check, but might not be a bad idea
-                pass
+                logging.error(f"Order id {ord_id} has incorrect side input")
+                continue
 
             if side == "b":
                 bid_dict[price] = bid_dict.get(price, 0) + quantity
@@ -198,7 +200,7 @@ def process_order_updates(df):
             curr_orders[ord_id] = new_order
 
         out_dict = get_n_levels(5, bid_dict, ask_dict)
-        #logging.info(out_dict)
+        logging.debug(out_dict)
 
         temp_dict = {'timestamp' : timestamp,
                      'price' : price,

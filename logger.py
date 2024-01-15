@@ -17,5 +17,5 @@ def init_logger(logfile_name, debug_level=0):
             logging.StreamHandler(),
         ],
     )
-    logger = logging.getLogger("marketsizing")
+    logger = logging.getLogger(__name__)
     return logger
