@@ -1,7 +1,7 @@
 OBA
 ====
 
-Order Book Analysis (OBA), a simple tool aggregate raw order book updates and use the
+Order Book Analysis (OBA), a simple tool to aggregate raw order book updates and use the
 output for research and model fitting.
 
 Note that all code has to be run from the root directory
@@ -24,11 +24,10 @@ python3 -m pip install -r requirements.txt
 python3 -m pytest tests
 ```
 
-* Generate orderbook data from the rawdata updates with:
+* Generate orderbook data from the rawdata updates with (run times vary 15-30s per date):
 ```console
 python3 generate_order_book.py 
 ```
-  Run time can 15-30s per date
 
 * All input data is in the folder [data](data) and the outputs are also written to it
 
