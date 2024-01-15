@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 from oba import oba
 import numpy as np
+from sortedcontainers import SortedDict
 
 
 def make_expected_output():
@@ -144,3 +145,38 @@ def test_orderbook_generation():
 
     for i in range(len(output)):
         assert output[i] == expected_output[i]
+
+
+def test_orderbook_update_and_delete():
+
+    bid_dict = SortedDict()
+    ask_dict = SortedDict()
+
+    oba.order_book_update_add(bid_dict, ask_dict, 99, 2,'b')
+
+    assert bid_dict == {99 : 2}
+    assert ask_dict == {}
+
+    oba.order_book_update_add(bid_dict, ask_dict, 95, 3,'b')
+    assert bid_dict == {95 : 3, 99 : 2}
+    assert ask_dict == {}
+
+    oba.order_book_update_add(bid_dict, ask_dict, 99, 5,'b')
+    assert bid_dict == {95 : 3, 99 : 7}
+    assert ask_dict == {}
+
+    oba.order_book_update_delete(bid_dict, ask_dict, 95, 3, 'b')
+    assert bid_dict == {99 : 7}
+    assert ask_dict == {}
+
+    oba.order_book_update_add(bid_dict, ask_dict, 101, 4, 'a')
+    assert bid_dict == {99 : 7}
+    assert ask_dict == {101 : 4}
+
+    oba.order_book_update_add(bid_dict, ask_dict, 103, 7, 'a')
+    assert bid_dict == {99 : 7}
+    assert ask_dict == {101 : 4, 103 : 7}
+
+    oba.order_book_update_delete(bid_dict, ask_dict, 101, 4, 'a')
+    assert bid_dict == {99 : 7}
+    assert ask_dict == {103 : 7}

@@ -87,13 +87,27 @@ def get_n_levels(n, bid_dict, ask_dict):
 
     return level_dict
 
-def order_update_add(bid_dict, ask_dict, price, quantity, side):
-    #TODO: use this in function process_order_update
-    pass
+def order_book_update_add(bid_dict, ask_dict, order_px, order_qty, order_side):
+    """ Updates dictionaries tracking the order book bids and asks for 
+    an order insertion
+    """
+    if order_side == "b":
+        bid_dict[order_px] = bid_dict.get(order_px, 0) + order_qty 
+    elif order_side == "a":
+        ask_dict[order_px] = ask_dict.get(order_px, 0) + order_qty 
 
-def order_update_delete(bid_dict, ask_dict, price, quantity, side):
-    #TODO: use this in function process_order_update
-    pass
+def order_book_update_delete(bid_dict, ask_dict, order_px, order_qty, order_side):
+    """ Updates dictionaries tracking the order book bids and asks for 
+    an order deletion
+    """
+    if order_side == "b":
+        bid_dict[order_px] = bid_dict.get(order_px, 0) - order_qty 
+        if bid_dict[order_px] == 0:
+            del bid_dict[order_px]
+    elif order_side == "a":
+        ask_dict[order_px] = ask_dict.get(order_px, 0) - order_qty 
+        if ask_dict[order_px] == 0:
+            del ask_dict[order_px]
 
 def process_order_updates(df):
     """ Processes dataframe consisting of order book updates and returns each update with 5 levels
