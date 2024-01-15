@@ -6,3 +6,6 @@ test:
 
 orderbook:
 	python3 generate_order_book.py
+
+updatereq:
+	python3 -m pip freeze > requirements.txt
