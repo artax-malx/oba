@@ -1,7 +1,3 @@
-[![PyPI](https://img.shields.io/pypi/v/danger-python)](https://pypi.org/project/danger-python/)
-![Python versions](https://img.shields.io/pypi/pyversions/danger-python)
-[![Build Status](https://travis-ci.org/danger/python.svg?branch=master)](https://travis-ci.org/danger/python)
-
 OBA
 ====
 
@@ -12,7 +8,7 @@ Note that all code has to be run from the root directory
 
 ### Requirements
 
-Running `danger-python` requires:
+Running the code requires:
 
 * Python 3.10 (tested under Python 3.10.13)
 
