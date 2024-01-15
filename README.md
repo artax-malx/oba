@@ -8,7 +8,7 @@ Note that all code has to be run from the root directory
 
 ### Requirements
 
-Running the code requires:
+Running `oba` requires:
 
 * Python 3.10 (tested under Python 3.10.13)
 
