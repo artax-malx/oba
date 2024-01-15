@@ -152,6 +152,9 @@ def test_orderbook_update_and_delete():
     bid_dict = SortedDict()
     ask_dict = SortedDict()
 
+    assert bid_dict == {}
+    assert ask_dict == {}
+
     oba.order_book_update_add(bid_dict, ask_dict, 99, 2,'b')
 
     assert bid_dict == {99 : 2}

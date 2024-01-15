@@ -6,12 +6,9 @@ import time
 import logging
 
 def get_data(date, test=False):
-    if test:
-        df = pd.read_csv("./data/test_input.csv", sep=",")
-    else:
-        df = pd.read_csv(f"./data/res_{date}.csv", sep=",")
 
-    return df
+    filename = "./data/test_input.csv" if test else f"./data/res_{date}.csv"
+    return pd.read_csv(filename, sep=",")
 
 
 def print_ob_dict(input_dict):
@@ -95,19 +92,27 @@ def order_book_update_add(bid_dict, ask_dict, order_px, order_qty, order_side):
         bid_dict[order_px] = bid_dict.get(order_px, 0) + order_qty 
     elif order_side == "a":
         ask_dict[order_px] = ask_dict.get(order_px, 0) + order_qty 
+    else:
+        raise Exception("Order has incorrect side input")
 
 def order_book_update_delete(bid_dict, ask_dict, order_px, order_qty, order_side):
     """ Updates dictionaries tracking the order book bids and asks for 
     an order deletion
     """
     if order_side == "b":
+        # M: Can't default to zero here. If the price
+        # level isn't there, something is wrong.
+        # (and if we get zero, then the quantity goes negative after).
         bid_dict[order_px] = bid_dict.get(order_px, 0) - order_qty 
         if bid_dict[order_px] == 0:
             del bid_dict[order_px]
     elif order_side == "a":
+        # M: Same here.
         ask_dict[order_px] = ask_dict.get(order_px, 0) - order_qty 
         if ask_dict[order_px] == 0:
             del ask_dict[order_px]
+    else:
+        raise Exception("Order has incorrect side input")
 
 def process_order_updates(df):
     """ Processes dataframe consisting of order book updates and returns each update with 5 levels
@@ -133,13 +138,7 @@ def process_order_updates(df):
         quantity = row["quantity"]
 
         if action == "a":
-            if side == "b":
-                bid_dict[price] = bid_dict.get(price, 0) + quantity
-            elif side == "a":
-                ask_dict[price] = ask_dict.get(price, 0) + quantity
-            else:
-                logging.error(f"Order id {ord_id} has incorrect side input")
-                continue
+            order_book_update_add(bid_dict, ask_dict, price, quantity, side)
 
             new_order = {
                 "timestamp": timestamp,
@@ -149,32 +148,17 @@ def process_order_updates(df):
             }
 
             curr_orders[ord_id] = new_order
-        elif action == "d":
-            curr_ord = curr_orders.get(ord_id, None)
-            if not curr_ord:
-                logging.error(f"Can't delete Order id {ord_id}; not in the data")
-                continue
 
-            # The side, price, quantity of the order to be deleted
-            # has to be the same in theory to the original order stored
-            # in curr_orders.
-            if side == "b":
-                bid_dict[price] = bid_dict.get(price, 0) - quantity
-                if bid_dict[price] == 0:
-                    del bid_dict[price]
-            elif side == "a":
-                ask_dict[price] = ask_dict.get(price, 0) - quantity
-                if ask_dict[price] == 0:
-                    del ask_dict[price]
-            else:
-                logging.error(f"Order id {ord_id} has incorrect side input")
-                continue
+        elif action == "d":
+            order_book_update_delete(bid_dict, ask_dict, price, quantity, side)
             del curr_orders[ord_id]
+
         elif action == "m":
+
+            # Would separate this into another function as well
             curr_ord = curr_orders.get(ord_id, None)
             if not curr_ord:
-                logging.error(f"Order id {ord_id} not in the data")
-                continue
+                raise Exception(f"Order id {ord_id} not in the data")
 
             # Need to retrieve the info of the original order
             # that will be modified
@@ -185,10 +169,12 @@ def process_order_updates(df):
             # Modify by the deleting the original order
             # and adding the new order
             if curr_side == "b":
+                # M: Same here
                 bid_dict[curr_price] = bid_dict.get(curr_price, 0) - curr_quantity
                 if bid_dict[curr_price] == 0:
                     del bid_dict[curr_price]
             elif curr_side == "a":
+                # M: Same here
                 ask_dict[curr_price] = ask_dict.get(curr_price, 0) - curr_quantity
                 if ask_dict[curr_price] == 0:
                     del ask_dict[curr_price]
