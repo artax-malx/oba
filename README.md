@@ -28,6 +28,7 @@ python3 -m pytest tests
 ```console
 python3 generate_order_book.py 
 ```
+Run time can 15-30s per date
 
 * All input data is in the folder [data](data) and the outputs are also written to it
 
