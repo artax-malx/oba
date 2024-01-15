@@ -135,7 +135,7 @@ def make_expected_output():
     
     return output
 
-def test_get_data():
+def test_orderbook_generation():
     df_test = oba.get_data(None, test=True)
     output = oba.process_order_updates(df_test)
     expected_output = make_expected_output()
