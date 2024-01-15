@@ -25,4 +25,6 @@ python3 generate_order_book.py
 
 * When running a log folder is automatically created for the log files
 
-* The main module is [oba/oba.py](oba.py) 
+* The main module is [oba.py](oba/oba.py) 
+
+* The Makefile contains often used commands
