@@ -4,9 +4,6 @@ from sortedcontainers import SortedDict
 import itertools
 import time
 import logging
-#from logger import init_logger
-#
-#logger = init_logger("./logs/oba.log")
 
 def get_data(date, test=False):
     if test:
@@ -90,6 +87,13 @@ def get_n_levels(n, bid_dict, ask_dict):
 
     return level_dict
 
+def order_update_add(bid_dict, ask_dict, price, quantity, side):
+    #TODO: use this in function process_order_update
+    pass
+
+def order_update_delete(bid_dict, ask_dict, price, quantity, side):
+    #TODO: use this in function process_order_update
+    pass
 
 def process_order_updates(df):
     """ Processes dataframe consisting of order book updates and returns each update with 5 levels
@@ -137,7 +141,9 @@ def process_order_updates(df):
                 logging.error(f"Can't delete Order id {ord_id}; not in the data")
                 continue
 
-            #TODO: take side, price and quantity from current order
+            # The side, price, quantity of the order to be deleted
+            # has to be the same in theory to the original order stored
+            # in curr_orders.
             if side == "b":
                 bid_dict[price] = bid_dict.get(price, 0) - quantity
                 if bid_dict[price] == 0:
@@ -156,6 +162,8 @@ def process_order_updates(df):
                 logging.error(f"Order id {ord_id} not in the data")
                 continue
 
+            # Need to retrieve the info of the original order
+            # that will be modified
             curr_side = curr_ord["side"]
             curr_price = curr_ord["price"]
             curr_quantity = curr_ord["quantity"]
@@ -190,7 +198,7 @@ def process_order_updates(df):
             curr_orders[ord_id] = new_order
 
         out_dict = get_n_levels(5, bid_dict, ask_dict)
-        #print(out_dict)
+        #logging.info(out_dict)
 
         temp_dict = {'timestamp' : timestamp,
                      'price' : price,
@@ -204,12 +212,8 @@ def process_order_updates(df):
 
 
 if __name__ == "__main__":
-
-    input_dates = ["20190610","20190611", "20190612","20190613", "20190614"]
-    datestr = "20190614"
-    logging.info(f"Started Order Book Analysis Run for {datestr}")
-
-    df_res = get_data(datestr, test=True)
+    datestr = "20190610"
+    df_res = get_data(datestr, test=False)
 
     start = time.time()
     #out, last_order_dict = process_order_updates(df_res)
