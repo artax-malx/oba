@@ -50,7 +50,8 @@
 
 
 \maketitle
-
+%\newpage 
+%\tableofcontents
 
 %\section{Introduction}
 
@@ -61,18 +62,20 @@ Each days spans roughly 10 hours worth of data (36 billion micros, see table bel
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{lrr}
+    \begin{tabular}{lrrrr}
     \toprule
-    date & min timestamp & max timestamp \\
+    date & min timestamp & max timestamp & avg bbo mid & avg 5 level order volume \\
     \midrule
-    20190610 & 0 & 36000000000\\
-    20190611 & 0 & 36000000000 \\
-    20190612 & 0 & 36000000000 \\
-    20190613 & 0 & 36000000000 \\
-    20190614 & 0 & 35999621354 \\
+    20190610 & 0 & 36000000000 & 10064 & 673 \\
+    20190611 & 0 & 36000000000 & 10127 & 866 \\
+    20190612 & 0 & 36000000000 & 9999 & 955 \\
+    20190613 & 0 & 36000000000 & 10065 & 908 \\
+    20190614 & 0 & 35999621354 & 9894 & 797 \\
     \bottomrule
     \end{tabular}
+    \label{tab2}
 \end{table}
+
 
 \subsection{Data resampling}
 The order book is of the form below:
@@ -88,30 +91,55 @@ The order book is of the form below:
     220 & 10075& 9 & 10080 & 25 \\
     \bottomrule
     \end{tabular}
+    \label{tab2}
 \end{table}
 
-where timestamp is in microseconds. Given the 
-
-
-First a simple plot of the data. The simple mid price is considered:
-\begin{equation}
-    P_{mid} = \frac{bp0 + ap0}{2}
-\end{equation}
-
-Also the inverse weighted mid price is calculated:
-
-\begin{equation}
-    P_{mid} = \frac{bp0\times aq0 + ap0 \times bq0}{bq0 + aq0}
-\end{equation}
+where the timestamps are in microseconds. Plotting a histogram of the frequency of the timestamps,
+we see that the updates aren't uniformly distributed: 
 
  \begin{figure}[H] 
 	\centering
-	\includegraphics[width=0.90\textwidth]{../data/figures/plot_mid_price_inv_mid_price.png}
-	\caption{}
+	\includegraphics[width=0.90\textwidth]{../data/figures/hist_timestamps.png}
+	\caption{Histogram of order update arrivals for date 20190610}
 	\label{fig1}
 \end{figure}
 
+For the analysis the data will be resampled. Specifically, a grid will be used with a time interval of
+100ms. This is done so as to reduce noise of the raw updates at microsecond level and detect any
+signals in the data. Obviously, this grid size might cause information less and a more thorough
+analysis can be done to optimize, but for practical considerations 100ms will be used as the
+discretization step. 
 
+Thus considering table \ref{tab2}, the timestamps will be rounded up to the nearest 10,000 micros.
+The reason to round up is to avoid look-ahead bias when using the data as a trade signal, since
+rounding down will match an order update with a timepoint in the past.
+
+\section{Feature and Target Selection}
+For the features and targets the following things are considered:
+\begin{itemize}
+    \item The simple average mid price:
+        \begin{equation}
+            P_{mid} = \frac{bp0 + ap0}{2}
+        \end{equation}
+    \item The inverse volume weighted mid price:
+        \begin{equation}
+            P_{mid} = \frac{bp0\times aq0 + ap0 \times bq0}{bq0 + aq0}
+        \end{equation}
+        This mid has the benefit of taking into account the order imbalance at the top level: if
+        the buy order volume is higher, the price will be skewed higher to the ask, and vice-versa
+        if the sell order volume is higher.
+    \item The bid-offer spread
+
+
+\end{itemize}
+
+First a simple plot of the data. The simple mid price is considered:
+ \begin{figure}[H] 
+	\centering
+	\includegraphics[width=0.90\textwidth]{../data/figures/time_series_mid_price_inv_mid_price.png}
+	\caption{}
+	\label{fig2}
+\end{figure}
 
 \section{Model Selection}
 
