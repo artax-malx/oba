@@ -5,6 +5,7 @@ import itertools
 import time
 import logging
 
+
 def get_data(date, test=False):
     if test:
         df = pd.read_csv("./data/test_input.csv", sep=",")
@@ -15,18 +16,18 @@ def get_data(date, test=False):
 
 
 def print_ob_dict(input_dict):
-
     print("Size | Bid Price")
     for i in range(5):
-        print(input_dict[f"bq{i}"], " | ",input_dict[f"bp{i}"])
+        print(input_dict[f"bq{i}"], " | ", input_dict[f"bp{i}"])
 
-    print("==="*30)
+    print("===" * 30)
     print("Size | Ask Price")
     for i in range(5):
-        print(input_dict[f"aq{i}"], " | ",input_dict[f"ap{i}"])
+        print(input_dict[f"aq{i}"], " | ", input_dict[f"ap{i}"])
+
 
 def aggregate_order_book(dict_orders):
-    """ Helper function that aggregates dictionary of live orders and 
+    """Helper function that aggregates dictionary of live orders and
     returns 5 best levels of both sides of the order book
     """
 
@@ -54,7 +55,7 @@ def aggregate_order_book(dict_orders):
 
 
 def get_n_levels(n, bid_dict, ask_dict):
-    """ Return a dictionary with n best levels from bid_dict and ask_dict 
+    """Return a dictionary with n best levels from bid_dict and ask_dict
 
     If there are less than n levels available, bq = 0 and bp = NaN is filled in
     """
@@ -87,30 +88,33 @@ def get_n_levels(n, bid_dict, ask_dict):
 
     return level_dict
 
+
 def order_book_update_add(bid_dict, ask_dict, order_px, order_qty, order_side):
-    """ Updates dictionaries tracking the order book bids and asks for 
+    """Updates dictionaries tracking the order book bids and asks for
     an order insertion
     """
     if order_side == "b":
-        bid_dict[order_px] = bid_dict.get(order_px, 0) + order_qty 
+        bid_dict[order_px] = bid_dict.get(order_px, 0) + order_qty
     elif order_side == "a":
-        ask_dict[order_px] = ask_dict.get(order_px, 0) + order_qty 
+        ask_dict[order_px] = ask_dict.get(order_px, 0) + order_qty
+
 
 def order_book_update_delete(bid_dict, ask_dict, order_px, order_qty, order_side):
-    """ Updates dictionaries tracking the order book bids and asks for 
+    """Updates dictionaries tracking the order book bids and asks for
     an order deletion
     """
     if order_side == "b":
-        bid_dict[order_px] = bid_dict.get(order_px, 0) - order_qty 
+        bid_dict[order_px] = bid_dict.get(order_px, 0) - order_qty
         if bid_dict[order_px] == 0:
             del bid_dict[order_px]
     elif order_side == "a":
-        ask_dict[order_px] = ask_dict.get(order_px, 0) - order_qty 
+        ask_dict[order_px] = ask_dict.get(order_px, 0) - order_qty
         if ask_dict[order_px] == 0:
             del ask_dict[order_px]
 
+
 def process_order_updates(df):
-    """ Processes dataframe consisting of order book updates and returns each update with 5 levels
+    """Processes dataframe consisting of order book updates and returns each update with 5 levels
     of the order book on both sides
 
     Args:
@@ -122,7 +126,7 @@ def process_order_updates(df):
     curr_orders = {}
     bid_dict = SortedDict()
     ask_dict = SortedDict()
-    data=[]
+    data = []
 
     for index, row in df.iterrows():
         action = row["action"]
@@ -216,14 +220,19 @@ def process_order_updates(df):
         out_dict = get_n_levels(5, bid_dict, ask_dict)
         logging.debug(out_dict)
 
-        temp_dict = {'timestamp' : timestamp,
-                     'price' : price,
-                     'side' : side,}
+        temp_dict = {
+            "timestamp": timestamp,
+            "price": price,
+            "side": side,
+        }
 
-        final_dict = {**temp_dict,**out_dict}
+        final_dict = {**temp_dict, **out_dict}
         data.append(final_dict)
 
-    #return data, curr_orders
+    # return data, curr_orders
+    assert len(data) == len(
+        df
+    ), "Error: output data does not have the same length as the input"
     return data
 
 
@@ -232,11 +241,11 @@ if __name__ == "__main__":
     df_res = get_data(datestr, test=False)
 
     start = time.time()
-    #out, last_order_dict = process_order_updates(df_res)
+    # out, last_order_dict = process_order_updates(df_res)
     out = process_order_updates(df_res)
     end = time.time()
     print(f"Run time {end - start} sec")
 
-    #last_level_dict = out[-1]
-    #b,a = aggregate_order_book(last_order_dict)
-    #print_ob_dict(last_level_dict)
+    # last_level_dict = out[-1]
+    # b,a = aggregate_order_book(last_order_dict)
+    # print_ob_dict(last_level_dict)

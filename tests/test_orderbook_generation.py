@@ -133,50 +133,52 @@ def make_expected_output():
             "aq4": 0,
         },
     ]
-    
+
     return output
+
 
 def test_orderbook_generation():
     df_test = oba.get_data(None, test=True)
     output = oba.process_order_updates(df_test)
     expected_output = make_expected_output()
 
-    assert len(output) == len(expected_output), "Test output length doesn't match length expected output"
+    assert len(output) == len(
+        expected_output
+    ), "Test output length doesn't match length expected output"
 
     for i in range(len(output)):
         assert output[i] == expected_output[i]
 
 
 def test_orderbook_update_and_delete():
-
     bid_dict = SortedDict()
     ask_dict = SortedDict()
 
-    oba.order_book_update_add(bid_dict, ask_dict, 99, 2,'b')
+    oba.order_book_update_add(bid_dict, ask_dict, 99, 2, "b")
 
-    assert bid_dict == {99 : 2}
+    assert bid_dict == {99: 2}
     assert ask_dict == {}
 
-    oba.order_book_update_add(bid_dict, ask_dict, 95, 3,'b')
-    assert bid_dict == {95 : 3, 99 : 2}
+    oba.order_book_update_add(bid_dict, ask_dict, 95, 3, "b")
+    assert bid_dict == {95: 3, 99: 2}
     assert ask_dict == {}
 
-    oba.order_book_update_add(bid_dict, ask_dict, 99, 5,'b')
-    assert bid_dict == {95 : 3, 99 : 7}
+    oba.order_book_update_add(bid_dict, ask_dict, 99, 5, "b")
+    assert bid_dict == {95: 3, 99: 7}
     assert ask_dict == {}
 
-    oba.order_book_update_delete(bid_dict, ask_dict, 95, 3, 'b')
-    assert bid_dict == {99 : 7}
+    oba.order_book_update_delete(bid_dict, ask_dict, 95, 3, "b")
+    assert bid_dict == {99: 7}
     assert ask_dict == {}
 
-    oba.order_book_update_add(bid_dict, ask_dict, 101, 4, 'a')
-    assert bid_dict == {99 : 7}
-    assert ask_dict == {101 : 4}
+    oba.order_book_update_add(bid_dict, ask_dict, 101, 4, "a")
+    assert bid_dict == {99: 7}
+    assert ask_dict == {101: 4}
 
-    oba.order_book_update_add(bid_dict, ask_dict, 103, 7, 'a')
-    assert bid_dict == {99 : 7}
-    assert ask_dict == {101 : 4, 103 : 7}
+    oba.order_book_update_add(bid_dict, ask_dict, 103, 7, "a")
+    assert bid_dict == {99: 7}
+    assert ask_dict == {101: 4, 103: 7}
 
-    oba.order_book_update_delete(bid_dict, ask_dict, 101, 4, 'a')
-    assert bid_dict == {99 : 7}
-    assert ask_dict == {103 : 7}
+    oba.order_book_update_delete(bid_dict, ask_dict, 101, 4, "a")
+    assert bid_dict == {99: 7}
+    assert ask_dict == {103: 7}
