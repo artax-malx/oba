@@ -39,13 +39,12 @@ def get_random_sample(df, n):
     return df_sub
 
 
-def plot_timeseries_fig(df):
-    cols = ["mid_price", "inv_mid_price"]
+def plot_timeseries_fig(df, cols, datestr):
     ax = df.plot(y=cols)
-    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
+    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.4f}"))
     fig = ax.get_figure()
 
-    fig.savefig(f"./data/figures/time_series_{'_'.join(cols)}.png")
+    fig.savefig(f"./data/figures/time_series_{datestr}_{'_'.join(cols)}.png")
     plt.close(fig)
 
 def plot_hist_fig(df): 
@@ -129,9 +128,13 @@ def feature_selection(df):
     df_sub["inv_mid_price"] = (
         df_sub["bp0"] * df_sub["aq0"] + df_sub["ap0"] * df_sub["bq0"]
     ) / (df_sub["bq0"] + df_sub["aq0"])
+
     df_sub["spread_abs"] = df_sub["ap0"] - df_sub["bp0"]
     df_sub["spread_bps"] = 10_000 * df_sub["spread_abs"] / df_sub["mid_price"]
+
     df_sub["flow_imbalance"] = df_sub["bq0"] / (df_sub["bq0"] + df_sub["aq0"])
+    df_sub['returns_abs'] = df_sub['mid_price'].diff(periods = 1)
+    df_sub['returns_log'] = 100*np.log(df_sub['mid_price']).diff(periods = 1)
     return df_sub
 
 
@@ -186,8 +189,12 @@ def train_model():
 if __name__ == "__main__":
     datestr = "20190610"
     df1 = get_order_book_data(datestr)
-    plot_hist_fig(df1)
+    #plot_hist_fig(df1)
 
     df2 = resample_data(df1, 5)
     df3 = feature_selection(df2)
-    plot_timeseries_fig(df3)
+
+    #cols = ["mid_price", "inv_mid_price"]
+    #cols = ["spread_bps"]
+    cols = ["returns_abs"]
+    plot_timeseries_fig(df3, cols, datestr)

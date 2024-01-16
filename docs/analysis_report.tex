@@ -99,7 +99,7 @@ we see that the updates aren't uniformly distributed:
 
  \begin{figure}[H] 
 	\centering
-	\includegraphics[width=0.90\textwidth]{../data/figures/hist_timestamps.png}
+	\includegraphics[width=0.90\textwidth]{../data/figures/hist_20190610_timestamps.png}
 	\caption{Histogram of order update arrivals for date 20190610}
 	\label{fig1}
 \end{figure}
@@ -110,16 +110,19 @@ signals in the data. Obviously, this grid size might cause information less and 
 analysis can be done to optimize, but for practical considerations 100ms will be used as the
 discretization step. 
 
-Thus considering table \ref{tab2}, the timestamps will be rounded up to the nearest 10,000 micros.
+Thus timestamps will be rounded up to the nearest 10,000 micros.
 The reason to round up is to avoid look-ahead bias when using the data as a trade signal, since
-rounding down will match an order update with a timepoint in the past.
+rounding down will match an order update with a timepoint in the past. In addition, when
+discretizing to a grid, there might an issue when there are no updates available. In that case a
+forward interpolation is done by using the last known value.
 
-\section{Feature and Target Selection}
-For the features and targets the following things are considered:
+\section{Feature Selection}
+\subsection{Target to predict}
+For the targets the following was considered:
 \begin{itemize}
     \item The simple average mid price:
         \begin{equation}
-            P_{mid} = \frac{bp0 + ap0}{2}
+            P_{mid} = \frac{bp0 + ap0}{2} \label{bbomid}
         \end{equation}
     \item The inverse volume weighted mid price:
         \begin{equation}
@@ -128,18 +131,42 @@ For the features and targets the following things are considered:
         This mid has the benefit of taking into account the order imbalance at the top level: if
         the buy order volume is higher, the price will be skewed higher to the ask, and vice-versa
         if the sell order volume is higher.
-    \item The bid-offer spread
-
-
 \end{itemize}
 
-First a simple plot of the data. The simple mid price is considered:
+For the target the simple average mid (equation \ref{bbomid}) is used rather than the inverse weighted mid. The reasoning
+being that the inverse weighted mid is a predictor of sorts for the simple average mid.
+Specifically, the target will be the mid price change time $t$ and $t+\delta$:
+
+\begin{equation}
+    V(t) = P_{mid, t+\delta} - P_{mid, t}
+\end{equation}
+
+The logic of using the price difference being that for trading predicting the price moves is more
+useful than the absolute price level.
+
+A plot of the data and some comments:
  \begin{figure}[H] 
 	\centering
-	\includegraphics[width=0.90\textwidth]{../data/figures/time_series_mid_price_inv_mid_price.png}
+	\includegraphics[width=0.90\textwidth]{../data/figures/time_series_20190610_mid_price_inv_mid_price.png}
 	\caption{}
 	\label{fig2}
 \end{figure}
+
+\subsection{Features}
+For the features, the ones below are considerd:
+\begin{itemize}
+    \item The bid-offer spread calculated as:
+        \begin{equation}
+            S = \frac{ap0 - bp0}{P_{mid}}
+        \end{equation}
+    The intuition of using the spread as a predictor for the change of the mid-price is that if say
+    the spread is relatively wide, then the probability of a non-markeatable limit order
+    arriving whose price is inside the spread is also higher. Whereas if the bid-offer spread was very
+    narrow, then the mid-price can only change when side of the order-book is depleted.
+\item 
+\end{itemize}
+
+
 
 \section{Model Selection}
 
