@@ -7,12 +7,18 @@ import logging
 
 
 def get_data(date, test=False):
-    if test:
-        df = pd.read_csv("./data/test_input.csv", sep=",")
-    else:
-        df = pd.read_csv(f"./data/res_{date}.csv", sep=",")
+
+    df = pd.read_csv(f"./data/res_{date}.csv", sep=",")
 
     return df
+
+def get_test_data():
+
+    df = pd.read_csv("./data/test_input.csv", sep=",")
+
+    return df
+
+
 
 
 def print_ob_dict(input_dict):
@@ -238,7 +244,7 @@ def process_order_updates(df):
 
 if __name__ == "__main__":
     datestr = "20190610"
-    df_res = get_data(datestr, test=False)
+    df_res = get_data(datestr)
 
     start = time.time()
     # out, last_order_dict = process_order_updates(df_res)
