@@ -105,12 +105,11 @@ we see that the updates aren't uniformly distributed:
 \end{figure}
 
 For the analysis the data will be resampled. Specifically, a grid will be used with a time interval of
-100ms. This is done so as to reduce noise of the raw updates at microsecond level and detect any
-signals in the data. Obviously, this grid size might cause information less and a more thorough
+100,000 micros = 100ms. This is done so as to reduce noise of the raw updates at microsecond level and detect any
+signals in the data. Obviously, this grid size might cause information loss and a more thorough
 analysis can be done to optimize, but for practical considerations 100ms will be used as the
-discretization step. 
-
-Thus timestamps will be rounded up to the nearest 10,000 micros.
+discretization step, since this will allow for quicker data processing and model estimation times. 
+In practice this means the timestamps will be rounded up to the nearest 100,000 micros.
 The reason to round up is to avoid look-ahead bias when using the data as a trade signal, since
 rounding down will match an order update with a timepoint in the past. In addition, when
 discretizing to a grid, there might an issue when there are no updates available. In that case a
@@ -126,38 +125,52 @@ For the targets the following was considered:
         \end{equation}
     \item The inverse volume weighted mid price:
         \begin{equation}
-            P_{mid} = \frac{bp0\times aq0 + ap0 \times bq0}{bq0 + aq0}
+            P_{mid} = \frac{bp0\times aq0 + ap0 \times bq0}{bq0 + aq0} \label{invmid}
         \end{equation}
         This mid has the benefit of taking into account the order imbalance at the top level: if
         the buy order volume is higher, the price will be skewed higher to the ask, and vice-versa
         if the sell order volume is higher.
+    \item The inverse volume weighted mid price at the first and second level:
+        \begin{equation}
+            P_{mid} = \frac{bp0\times aq0 + ap0 \times bq0 + bp1\times aq1 + ap1 \times bq1}{bq0 +
+            aq0+bq1+aq1} \label{invmid}
+        \end{equation}
+        This mid has the same advantage as the previous one and it also takes into account the
+        second layer of the orderbook
 \end{itemize}
 
-For the target the simple average mid (equation \ref{bbomid}) is used rather than the inverse weighted mid. The reasoning
-being that the inverse weighted mid is a predictor of sorts for the simple average mid. 
+For the target the simple average mid (equation \ref{bbomid}) is used rather than one of the two
+inverse weighted mids. The reasoning being that the inverse weighted mids are predictors of sorts for the simple average mid. 
 
-Another interesing target would be the mid price change time $t$ and $t+\delta$:
+Another interesing target would be the mid price change from time $t$  $t+\delta$ where the $\delta$
+is set to a multiple of the discretization step 100ms. The logic being that the price moves is what
+the market focueses on, rather than the absolute price level. To keep things simple, the target
+variable to be predicted will be the simple average mid price.
 
-\begin{equation}
-    V(t) = P_{mid, t+\delta} - P_{mid, t}
-\end{equation}
-where the $\delta$ is set to 100ms. The logic being that price differences are easier to predict
-rather than the absolute price level.
-
-A plot of the data and some comments:
- \begin{figure}[H] 
+Below are the plots of the mid price and iverse weighted mid price for different days. Looking at
+the plots there are no weird outliers. Also clearly the inverse weighted mid price closely track the
+simple average mid price.
+\begin{figure}[H] 
 	\centering
 	\includegraphics[width=0.70\textwidth]{../data/figures/time_series_20190610_mid_price_inv_mid_price.png}
-	\caption{}
+	\caption{Day 2019-06-10}
 	\label{fig2}
 \end{figure}
 
- \begin{figure}[H] 
+\begin{figure}[H] 
 	\centering
-	\includegraphics[width=0.70\textwidth]{../data/figures/time_series_20190610_returns_abs.png}
-	\caption{}
+	\includegraphics[width=0.70\textwidth]{../data/figures/time_series_20190612_mid_price_inv_mid_price.png}
+	\caption{Day 2019-06-12}
 	\label{fig3}
 \end{figure}
+
+
+% \begin{figure}[H] 
+%	\centering
+%	\includegraphics[width=0.70\textwidth]{../data/figures/time_series_20190610_returns_abs.png}
+%	\caption{}
+%	\label{fig3}
+%\end{figure}
 
 \subsection{Features}
 For the features, the ones below are considerd:
@@ -170,7 +183,7 @@ For the features, the ones below are considerd:
     the spread is relatively wide, then the probability of a non-markeatable limit order
     arriving whose price is inside the spread is also higher. Whereas if the bid-offer spread was very
     narrow, then the mid-price can only change when side of the order-book is depleted.
-    \item Order imbalance: 
+    \item Order imbalance at the top level: 
         \begin{equation}
             OI = \frac{bq0}{bq0+aq0} 
         \end{equation}
@@ -180,7 +193,24 @@ For the features, the ones below are considerd:
     reduces bias in the model fitting. Note that if the top level bid size queue is larger than the
         one on the ask side, the ratio will be close to 1. And if the ask side has a much larger
         queue the ratio will be cloe to 0.
+    \item Order imbalance at the second level: same as the above metric, but at the second level of
+        the order book
+    \item Change in $bq0$ relative to the previous period:
+        \begin{equation}
+            bq0_{t} - bq0_{t-\delta} 
+        \end{equation}
+        The intuition behind this is that the arrival of a large order on the bid side indicates
+        more buying pressure and vice versa when a large buy order is removed by a markeatable
+        action. Both cases make it likely for the mid price to move.
+    \item Change in $aq0$ relative to the previous period:
+        \begin{equation}
+            aq0_{t} - aq0_{t-\delta} 
+        \end{equation}
+        The intuition behind this is the same as the one for the bid quantity increasing.
+    \item Finally the inverse mid price will also be considered as defined in equation \ref{invmid}
 \end{itemize}
+
+
 
 \section{Model Selection}
 The model that will be estimated using a Lasso regression:

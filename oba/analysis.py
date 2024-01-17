@@ -53,7 +53,7 @@ def get_random_sample(df, n):
 
 def plot_timeseries_fig(df, cols, datestr):
     ax = df.plot(y=cols)
-    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.4f}"))
+    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
     fig = ax.get_figure()
 
     fig.savefig(f"./data/figures/time_series_{datestr}_{'_'.join(cols)}.png")
@@ -69,9 +69,9 @@ def plot_hist_fig(df):
     plt.close(fig)
 
 
-def resample_data(df, precision):
+def resample_data(df, resample_freq = 5):
     """Resamples the data by flooring the timestamp up to the nearest freq
-    specified by precision
+    specified by resample_freq 
 
     df (pd.DataFrame): Must have column timestamp in micros.
                       So ceiling up to nearest 10_000, creates a grid spaced by 10ms
@@ -79,9 +79,9 @@ def resample_data(df, precision):
 
     df_sub = df.copy()
 
-    # df_sub['timestamp_new'] = df_sub['timestamp'].round(decimals=-1*precision)
+    # df_sub['timestamp_new'] = df_sub['timestamp'].round(decimals=-1*resample_freq)
 
-    freq = 10**precision
+    freq = 10**resample_freq
     df_sub["timestamp_new"] = np.ceil(df_sub["timestamp"] / freq).astype(int) * freq
     df_sub = df_sub.groupby(by="timestamp_new").last()
 
@@ -123,12 +123,19 @@ def describe_data():
     return out
 
 
-def feature_selection(df):
+def feature_selection(df, fut_period):
     df_sub = df.copy()
     df_sub["mid_price"] = (df_sub["ap0"] + df_sub["bp0"]) / 2
     df_sub["inv_mid_price"] = (
         df_sub["bp0"] * df_sub["aq0"] + df_sub["ap0"] * df_sub["bq0"]
     ) / (df_sub["bq0"] + df_sub["aq0"])
+
+    df_sub["inv_mid_price2"] = (
+        df_sub["bp0"] * df_sub["aq0"]
+        + df_sub["ap0"] * df_sub["bq0"]
+        + df_sub["bp1"] * df_sub["aq1"]
+        + df_sub["ap1"] * df_sub["bq1"]
+    ) / (df_sub["bq0"] + df_sub["aq0"] + df_sub["bq1"] + df_sub["aq1"])
 
     df_sub["spread"] = df_sub["ap0"] - df_sub["bp0"]
     df_sub["spread_bps"] = 10_000 * df_sub["spread"] / df_sub["mid_price"]
@@ -139,32 +146,37 @@ def feature_selection(df):
     df_sub["ord_im1"] = df_sub["bq1"] - df_sub["aq1"]
     df_sub["ord_im_rel1"] = df_sub["bq1"] / (df_sub["bq1"] + df_sub["aq1"])
 
-    df_sub["returns"] = df_sub["mid_price"].diff(periods=1)
-    df_sub["returns_log"] = 100 * np.log(df_sub["mid_price"]).diff(periods=1)
+    df_sub["diff_bq0"] = df_sub["bq0"].diff(periods=1)
+    df_sub["diff_aq0"] = df_sub["aq0"].diff(periods=1)
 
-    df_sub["returns_fut"] = df_sub["returns"].shift(-1)
-    df_sub["returns_log_fut"] = df_sub["returns_log"].shift(-1)
+    #df_sub["returns"] = df_sub["mid_price"].diff(periods=1)
+    #df_sub["returns_log"] = 100 * np.log(df_sub["mid_price"]).diff(periods=1)
 
-    df_sub["mid_price_fut"] = df_sub["mid_price"].shift(-1)
+    shift_period = -1*fut_period
+    df_sub["mid_price_fut"] = df_sub["mid_price"].shift(shift_period)
 
     return df_sub
 
 
-def train_model():
-    input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"
-            ]
+def train_model(fut_period = 1, alpha = 10, resample_freq = 5):
+    input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"]
 
     for datestr in input_dates:
         date = dt.datetime.strptime(datestr, "%Y%m%d")
         print(date)
         df1 = get_order_book_data(datestr)
-        df2 = resample_data(df1,5)
-        df3 = feature_selection(df2)
+        df2 = resample_data(df1, resample_freq = resample_freq)
+        df3 = feature_selection(df2, fut_period = fut_period)
 
-        features = ["spread", "ord_im", "ord_im_rel", "bq0", "aq0"]
+        features = ["spread", "ord_im", "ord_im_rel", "diff_bq0", "diff_aq0", 
+                    #"inv_mid_price2"
+                    ]
         target = ["mid_price_fut"]
 
-        df3 = df3.loc[~df3[target[0]].isnull()].copy()
+        # Lasso model fitting does not accept NaN values
+        df3 = df3.loc[:, target + features].copy()
+        df3 = df3.dropna(axis = 0, how = "any")
+        #df3 = df3.loc[~df3[target[0]].isnull()].copy()
 
         X = df3[features].values
         y = df3[target].values
@@ -182,30 +194,33 @@ def train_model():
         # Lasso regression model
 
         print("\nLasso Model............................................\n")
-        lasso = Lasso(alpha=0.01)
+        lasso = Lasso(alpha=alpha)
         lasso.fit(X_train, y_train)
         train_score_ls = lasso.score(X_train, y_train)
         test_score_ls = lasso.score(X_test, y_test)
 
         print("The train score for ls model is {}".format(train_score_ls))
         print("The test score for ls model is {}".format(test_score_ls))
-        ax = pd.Series(lasso.coef_, features).sort_values(ascending = True).plot(kind = "bar")
-        ax.tick_params(axis='x', labelrotation=20)
+        ax = (
+            pd.Series(lasso.coef_, features)
+            .sort_values(ascending=True)
+            .plot(kind="bar")
+        )
+        ax.tick_params(axis="x", labelrotation=20)
         plt.show()
 
 
-
 if __name__ == "__main__":
-    datestr = "20190610"
-    df1 = get_order_book_data(datestr)
-    # plot_hist_fig(df1)
-
-    df2 = resample_data(df1, 5)
-    df3 = feature_selection(df2)
-    #train_model()
-
-    # cols = ["mid_price", "inv_mid_price"]
-    # cols = ["spread_bps"]
-    # cols = ["returns_abs"]
-    #cols = ["order_imbalance"]
-    #plot_timeseries_fig(df3, cols, datestr)
+    train_model(fut_period = 5, alpha = 0.1, resample_freq = 5)
+    # input_dates = ["20190610"]
+    # input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"]
+    # for datestr in input_dates:
+    #    df1 = get_order_book_data(datestr)
+    #    # plot_hist_fig(df1)
+    #    df2 = resample_data(df1, resample_freq = 5)
+    #    df3 = feature_selection(df2, fut_period = 1)
+    #    cols = ["inv_mid_price2", "inv_mid_price","mid_price"]
+    #    # cols = ["spread_bps"]
+    #    # cols = ["returns_abs"]
+    #    #cols = ["order_imbalance"]
+    #    plot_timeseries_fig(df3, cols, datestr)
