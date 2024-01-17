@@ -7,18 +7,15 @@ import logging
 
 
 def get_data(date, test=False):
-
     df = pd.read_csv(f"./data/res_{date}.csv", sep=",")
 
     return df
 
-def get_test_data():
 
+def get_test_data():
     df = pd.read_csv("./data/test_input.csv", sep=",")
 
     return df
-
-
 
 
 def print_ob_dict(input_dict):
