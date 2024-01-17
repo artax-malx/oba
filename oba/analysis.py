@@ -15,6 +15,18 @@ def get_order_book_data(date):
     return df
 
 
+def data_preprocessing(df, date):
+    """Preprocessing of the data"""
+    # Take only data where there is a best/ask
+    # mask = (~df["bp0"].isnull()) & (~df["ap0"].isnull())
+    # df_sub = df.loc[mask].copy()
+    df_sub = df.copy()
+
+    # df_sub['datetime'] = date.timestamp()  + df_sub['timestamp']/1_000_000
+    # df_sub['datetime'] = pd.to_datetime(df_sub['datetime'], unit = 's', utc = True)
+    return df_sub
+
+
 def get_test_order_book_data():
     arr = np.array(
         [
@@ -47,7 +59,8 @@ def plot_timeseries_fig(df, cols, datestr):
     fig.savefig(f"./data/figures/time_series_{datestr}_{'_'.join(cols)}.png")
     plt.close(fig)
 
-def plot_hist_fig(df): 
+
+def plot_hist_fig(df):
     ax = (df["timestamp"] / 1_000_000).plot(kind="hist", bins=50)
     ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
 
@@ -110,18 +123,6 @@ def describe_data():
     return out
 
 
-def data_preprocessing(df, date):
-    """Preprocessing of the data"""
-    # Take only data where there is a best/ask
-    # mask = (~df["bp0"].isnull()) & (~df["ap0"].isnull())
-    # df_sub = df.loc[mask].copy()
-    df_sub = df.copy()
-
-    # df_sub['datetime'] = date.timestamp()  + df_sub['timestamp']/1_000_000
-    # df_sub['datetime'] = pd.to_datetime(df_sub['datetime'], unit = 's', utc = True)
-    return df_sub
-
-
 def feature_selection(df):
     df_sub = df.copy()
     df_sub["mid_price"] = (df_sub["ap0"] + df_sub["bp0"]) / 2
@@ -129,36 +130,44 @@ def feature_selection(df):
         df_sub["bp0"] * df_sub["aq0"] + df_sub["ap0"] * df_sub["bq0"]
     ) / (df_sub["bq0"] + df_sub["aq0"])
 
-    df_sub["spread_abs"] = df_sub["ap0"] - df_sub["bp0"]
-    df_sub["spread_bps"] = 10_000 * df_sub["spread_abs"] / df_sub["mid_price"]
+    df_sub["spread"] = df_sub["ap0"] - df_sub["bp0"]
+    df_sub["spread_bps"] = 10_000 * df_sub["spread"] / df_sub["mid_price"]
 
-    df_sub["flow_imbalance"] = df_sub["bq0"] / (df_sub["bq0"] + df_sub["aq0"])
-    df_sub['returns_abs'] = df_sub['mid_price'].diff(periods = 1)
-    df_sub['returns_log'] = 100*np.log(df_sub['mid_price']).diff(periods = 1)
+    df_sub["ord_im"] = df_sub["bq0"] - df_sub["aq0"]
+    df_sub["ord_im_rel"] = df_sub["bq0"] / (df_sub["bq0"] + df_sub["aq0"])
+
+    df_sub["ord_im1"] = df_sub["bq1"] - df_sub["aq1"]
+    df_sub["ord_im_rel1"] = df_sub["bq1"] / (df_sub["bq1"] + df_sub["aq1"])
+
+    df_sub["returns"] = df_sub["mid_price"].diff(periods=1)
+    df_sub["returns_log"] = 100 * np.log(df_sub["mid_price"]).diff(periods=1)
+
+    df_sub["returns_fut"] = df_sub["returns"].shift(-1)
+    df_sub["returns_log_fut"] = df_sub["returns_log"].shift(-1)
+
+    df_sub["mid_price_fut"] = df_sub["mid_price"].shift(-1)
+
     return df_sub
 
 
 def train_model():
-    input_dates = [
-        "20190610",
-         "20190611",
-         "20190612",
-         "20190613",
-         "20190614"
-    ]
+    input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"
+            ]
 
     for datestr in input_dates:
-        df1 = get_order_book_data(datestr)
         date = dt.datetime.strptime(datestr, "%Y%m%d")
-        df2 = data_preprocessing(df1, date)
-        df3 = resample_data(df2)
-        df4 = feature_selection(df3)
+        print(date)
+        df1 = get_order_book_data(datestr)
+        df2 = resample_data(df1,5)
+        df3 = feature_selection(df2)
 
-        features = ["spread_bps", "flow_imbalance"]
-        target = ["mid_price"]
+        features = ["spread", "ord_im", "ord_im_rel", "bq0", "aq0"]
+        target = ["mid_price_fut"]
 
-        X = df4[features].values
-        y = df4[target].values
+        df3 = df3.loc[~df3[target[0]].isnull()].copy()
+
+        X = df3[features].values
+        y = df3[target].values
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, random_state=17
         )
@@ -173,28 +182,30 @@ def train_model():
         # Lasso regression model
 
         print("\nLasso Model............................................\n")
-        lasso = Lasso(alpha=10)
+        lasso = Lasso(alpha=0.01)
         lasso.fit(X_train, y_train)
         train_score_ls = lasso.score(X_train, y_train)
         test_score_ls = lasso.score(X_test, y_test)
 
         print("The train score for ls model is {}".format(train_score_ls))
         print("The test score for ls model is {}".format(test_score_ls))
+        ax = pd.Series(lasso.coef_, features).sort_values(ascending = True).plot(kind = "bar")
+        ax.tick_params(axis='x', labelrotation=20)
+        plt.show()
 
-        # print(f"======{datestr}======")
-        # print(df2["spread_abs"].sort_values(ascending=True).unique())
-        # print(df2["spread_bps"].sort_values(ascending=True).unique())
 
 
 if __name__ == "__main__":
     datestr = "20190610"
     df1 = get_order_book_data(datestr)
-    #plot_hist_fig(df1)
+    # plot_hist_fig(df1)
 
     df2 = resample_data(df1, 5)
     df3 = feature_selection(df2)
+    #train_model()
 
-    #cols = ["mid_price", "inv_mid_price"]
-    #cols = ["spread_bps"]
-    cols = ["returns_abs"]
-    plot_timeseries_fig(df3, cols, datestr)
+    # cols = ["mid_price", "inv_mid_price"]
+    # cols = ["spread_bps"]
+    # cols = ["returns_abs"]
+    #cols = ["order_imbalance"]
+    #plot_timeseries_fig(df3, cols, datestr)
