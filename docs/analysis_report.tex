@@ -227,7 +227,13 @@ fixed at $\delta = 100ms$, so one discretization step forward on our grid. Obvio
 be tested, but due to time constraints only this value will be used.
 
 Note that the inverse weighted mid price of two layers $P_{mid, t}^2$ will be heavily correlated with $P_{mid}$. 
-Hence, the regression will be run twice: with and without the inverse weighted mid price.
+Hence, the regression will be run twice: with the inverse weighted mid price which will be model 1
+and one time without the inverse weighted mid price, model 2:
+\begin{equation}
+    P_{mid, t + \delta} = BOspread_{t} + OI_{0, t} + OI_{1,t} + \Delta bq_{0,t} + \Delta aq_{0,t} +
+    \beta_0 + \epsilon 
+\end{equation}
+
 
 \section{Results}
 The model above is estimated using a Lasso regression. Different alphas are experimented with and
@@ -291,7 +297,9 @@ this, since correlation does not mean causation.
 
 The regression is done again with $P_{mid, t}^2$ omitted, to zoom in on the other variables. See the
 tables below. Here it becomes that the other variables don't predict the target variable very well,
-which can be observed by the higher MSEs and the lower scores.
+which can be observed by the higher MSEs and the lower scores. There might be many issues here, the
+choice of discretization step for the grid, the forecast horizon of $\delta = 100ms$, the form of
+the target variable: log difference of the mid could have been tested. 
 
 
 \begin{table}[H]
@@ -343,12 +351,15 @@ which can be observed by the higher MSEs and the lower scores.
     \end{minipage}
 \end{table}
 
-The coefficients are:
+Interestingly, date 2019-06-14 has a higher score than the other dates, but also a higher mean
+square error. This suggests the model fits the data better for that day, but the predictions still
+have a high amount of error. 
 
+The sign of the coefficients is reported in the tables below for $\alpha = 0.04$ for several dates:
 
 \begin{table}[H]
   \centering
-  \begin{minipage}{.4\textwidth}
+  \begin{minipage}{.25\textwidth}
     \centering
       \begin{tabular}{lr}
       \toprule
@@ -363,7 +374,8 @@ The coefficients are:
       \end{tabular}
   \caption{ $\alpha = 0.04$ and 2019-06-10}
   \end{minipage}
-  \begin{minipage}{.4\textwidth}
+    \hspace{1cm}
+  \begin{minipage}{.25\textwidth}
     \centering
   \begin{tabular}{lr}
   \toprule
@@ -378,9 +390,8 @@ The coefficients are:
   \end{tabular}
   \caption{ $\alpha = 0.04$ and 2019-06-12}
   \end{minipage}
-\end{table}
-
-\begin{table}[H]
+    \hspace{1cm}
+  \begin{minipage}{.25\textwidth}
     \centering
     \begin{tabular}{lr}
     \toprule
@@ -394,7 +405,20 @@ The coefficients are:
     \bottomrule
     \end{tabular}
     \caption{ $\alpha = 0.04$ and 2019-06-14}
+  \end{minipage}
 \end{table}
+
+\begin{table}[H]
+\end{table}
+
+The expectation would be for all coefficients to be positive, since increasing values of the
+variables indicate buying pressure and decreasing value indicate selling pressure. However, several
+coefficients are negative, however with low absolute value. There was not enough time to include the
+statistical significance of these coefficients, however, it is likely that they are not
+statistically significant. Furthermore, on date 2019-06-14, the magnitude of two order imbalance
+variables ($OI_0$ and $OI_1$) is quite substantial. This is likely related with the test
+scores being very high for that date. Further investigation is needed to improve and test for better models. 
+
 %%\section{Conclusion}       
 
 \bibliographystyle{plain}

@@ -6,3 +6,5 @@
 *.log
 *.toc
 output
+data/lasso_model
+data/figures
