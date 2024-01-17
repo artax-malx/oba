@@ -181,11 +181,11 @@ def train_model(fut_period=1, alpha=10, resample_freq=5):
 
         features = [
             "spread_bps",
-            "ord_im",
-            "ord_im1",
+            "ord_im_rel",
+            "ord_im_rel1",
             "diff_bq0",
             "diff_aq0",
-            # "inv_mid_price2"
+            #"inv_mid_price2"
         ]
 
         target = ["mid_price_fut"]
@@ -215,7 +215,9 @@ def train_model(fut_period=1, alpha=10, resample_freq=5):
         lasso.fit(X_train, y_train)
         train_score_ls = lasso.score(X_train, y_train)
         test_score_ls = lasso.score(X_test, y_test)
-        scores.append([datestr, train_score_ls, test_score_ls])
+
+        mse_test, mse_train = get_mse_model(lasso, X_train, y_train, X_test, y_test)
+        scores.append([datestr, train_score_ls, mse_train, test_score_ls, mse_test])
 
         print("The train score for ls model is {}".format(train_score_ls))
         print("The test score for ls model is {}".format(test_score_ls))
@@ -231,7 +233,7 @@ def train_model(fut_period=1, alpha=10, resample_freq=5):
         )
         plt.close(fig)
 
-    df_scores = pd.DataFrame(scores, columns=["date", "test_score", "train_score"])
+    df_scores = pd.DataFrame(scores, columns=["date", "test_score","test_mse", "train_score", "train_mse"])
     return df_scores
 
 
