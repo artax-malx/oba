@@ -9,23 +9,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge, RidgeCV, Lasso
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
+import logging
 
 
 def get_order_book_data(date):
-    df = pd.read_csv(f"./data/output/order_book_data_{date}.csv", sep=",")
-    return df
-
-
-def data_preprocessing(df, date):
-    """Preprocessing of the data"""
-    # Take only data where there is a best/ask
-    # mask = (~df["bp0"].isnull()) & (~df["ap0"].isnull())
-    # df_sub = df.loc[mask].copy()
-    df_sub = df.copy()
-
-    # df_sub['datetime'] = date.timestamp()  + df_sub['timestamp']/1_000_000
-    # df_sub['datetime'] = pd.to_datetime(df_sub['datetime'], unit = 's', utc = True)
-    return df_sub
+    filename = f"./data/output/order_book_data_{date}.csv"
+    return pd.read_csv(filename, sep=",")
 
 
 def get_test_order_book_data():
@@ -44,58 +33,8 @@ def get_test_order_book_data():
     df = pd.DataFrame(arr, columns=["timestamp", "bp0", "bq0", "ap0", "aq0"])
     return df
 
-
-def get_random_sample(df, n):
-    df_sub = df.sample(n=n, random_state=1)
-    df_sub = df_sub.sort_values(by="timestamp", ascending=True)
-
-    return df_sub
-
-
-def plot_timeseries_fig(df, cols, datestr):
-    ax = df.plot(y=cols)
-    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
-    fig = ax.get_figure()
-
-    fig.savefig(f"./data/figures/time_series_{datestr}_{'_'.join(cols)}.png")
-    plt.close(fig)
-
-
-def plot_hist_fig(df):
-    ax = (df["timestamp"] / 1_000_000).plot(kind="hist", bins=50)
-    ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
-
-    fig = ax.get_figure()
-    fig.savefig(f"./data/figures/hist_timestamps.png")
-    plt.close(fig)
-
-
-def resample_data(df, resample_freq=5):
-    """Resamples the data by flooring the timestamp up to the nearest freq
-    specified by resample_freq
-
-    df (pd.DataFrame): Must have column timestamp in micros.
-                      So ceiling up to nearest 10_000, creates a grid spaced by 10ms
-    """
-
-    df_sub = df.copy()
-
-    # df_sub['timestamp_new'] = df_sub['timestamp'].round(decimals=-1*resample_freq)
-
-    freq = 10**resample_freq
-    df_sub["timestamp_new"] = np.ceil(df_sub["timestamp"] / freq).astype(int) * freq
-    df_sub = df_sub.groupby(by="timestamp_new").last()
-
-    new_idx = pd.RangeIndex(
-        start=df_sub.index.min(), stop=df_sub.index.max() + 1, step=freq
-    )
-    df_sub = df_sub.reindex(new_idx)
-    df_sub = df_sub.ffill()
-
-    return df_sub
-
-
 def describe_data():
+    """ Quick function to get descriptive data on orderbook datasets """
     input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"]
     data = []
     for datestr in input_dates:
@@ -123,17 +62,73 @@ def describe_data():
 
     return out
 
-def get_mse_model(model, X_train, y_train, X_test, y_test):
 
+def get_random_sample(df, n):
+    """Helper function to get a random sample of a dataframe"""
+    df_sub = df.sample(n=n, random_state=1)
+    df_sub = df_sub.sort_values(by="timestamp", ascending=True)
+
+    return df_sub
+
+
+def plot_timeseries_fig(datestr, cols):
+    """ Quick function to plot time series of the data """
+
+    ob = get_order_book_data(datestr)
+    ob_res = resample_data(ob, resample_freq = 5)
+    df = feature_selection(ob_res, forecast_period = 1)
+
+    ax = df.plot(y=cols)
+    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:,.0f}"))
+    fig = ax.get_figure()
+
+    fig.savefig(f"./data/figures/time_series_{datestr}_{'_'.join(cols)}.png")
+    plt.close(fig)
+
+
+def get_mse_from_model(model, X_train, y_train, X_test, y_test):
     pred_train = model.predict(X_train)
     mse_train = mean_squared_error(y_train, pred_train)
 
     pred = model.predict(X_test)
-    mse_test =mean_squared_error(y_test, pred)
+    mse_test = mean_squared_error(y_test, pred)
 
-    return mse_test, mse_train 
+    return mse_test, mse_train
 
-def feature_selection(df, fut_period):
+def resample_data(df, resample_freq=5):
+    """Resamples the data by flooring the timestamp up to the nearest freq
+    specified by resample_freq
+
+    Args:
+        df (pd.DataFrame): Must have column timestamp in micros. 
+
+        resample_freq (int): raised 10 to this power and use number
+                             as resample frequency.
+
+    Example: If resample_freq = 5, function wil ceilup to nearest 10_000, 
+            creating a grid spaced by 10ms
+    """
+
+    df_sub = df.copy()
+    freq = 10**resample_freq
+    df_sub["timestamp_new"] = np.ceil(df_sub["timestamp"] / freq).astype(int) * freq
+    df_sub = df_sub.groupby(by="timestamp_new").last()
+
+    new_idx = pd.RangeIndex(
+        start=df_sub.index.min(), stop=df_sub.index.max() + 1, step=freq
+    )
+    df_sub = df_sub.reindex(new_idx)
+    df_sub = df_sub.ffill()
+
+    return df_sub
+
+def feature_selection(df, forecast_period):
+    """ Calculates relevant set of features
+        
+    Args:
+        df (pd.DataFrame): orderbook data
+        forecast_period: forecast horizon for the target variable
+    """
     df_sub = df.copy()
     df_sub["mid_price"] = (df_sub["ap0"] + df_sub["bp0"]) / 2
     df_sub["inv_mid_price"] = (
@@ -159,97 +154,77 @@ def feature_selection(df, fut_period):
     df_sub["diff_bq0"] = df_sub["bq0"].diff(periods=1)
     df_sub["diff_aq0"] = df_sub["aq0"].diff(periods=1)
 
-    # df_sub["returns"] = df_sub["mid_price"].diff(periods=1)
-    # df_sub["returns_log"] = 100 * np.log(df_sub["mid_price"]).diff(periods=1)
+    df_sub["diff_mid_price"] = df_sub["mid_price"].diff(periods=1)
+    df_sub["log_diff_mid_price"] = 100 * np.log(df_sub["mid_price"]).diff(periods=1)
 
-    shift_period = -1 * fut_period
+    shift_period = -1 * forecast_period
     df_sub["mid_price_fut"] = df_sub["mid_price"].shift(shift_period)
 
     return df_sub
 
 
-def train_model(fut_period=1, alpha=10, resample_freq=5):
-    input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"]
+def train_model(datestr, forecast_period=1, alpha=10, resample_freq=5):
+    """ Main module to train Lasso model
 
-    scores = []
-    for datestr in input_dates:
-        date = dt.datetime.strptime(datestr, "%Y%m%d")
-        print(date)
-        df1 = get_order_book_data(datestr)
-        df2 = resample_data(df1, resample_freq=resample_freq)
-        df3 = feature_selection(df2, fut_period=fut_period)
+    Args:
+        datestr (str): date of the input file
+        forecast_period (int): the forcecast horizion for the target variable 
+        alpha (float): Alpha used in the Lasso regression
+        resample_freq (int): power of ten, used to calculate 
+                             the discretization step = 10**resample_freq
+    """
+    df1 = get_order_book_data(datestr)
+    df2 = resample_data(df1, resample_freq=resample_freq)
+    df3 = feature_selection(df2, forecast_period=forecast_period)
 
-        features = [
-            "spread_bps",
-            "ord_im_rel",
-            "ord_im_rel1",
-            "diff_bq0",
-            "diff_aq0",
-            #"inv_mid_price2"
-        ]
+    features = [
+        "spread_bps",
+        "ord_im_rel",
+        "ord_im_rel1",
+        "diff_bq0",
+        "diff_aq0",
+        "inv_mid_price2",
+    ]
 
-        target = ["mid_price_fut"]
+    target = ["mid_price_fut"]
 
-        # Lasso model fitting does not accept NaN values
-        df3 = df3.loc[:, target + features].copy()
-        df3 = df3.dropna(axis=0, how="any")
-        # df3 = df3.loc[~df3[target[0]].isnull()].copy()
+    # Lasso model fitting does not accept NaN values
+    df3 = df3.loc[:, target + features].copy()
+    df3 = df3.dropna(axis=0, how="any")
 
-        X = df3[features].values
-        y = df3[target].values
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, random_state=17
-        )
-        print("The dimension of X_train is {}".format(X_train.shape))
-        print("The dimension of X_test is {}".format(X_test.shape))
+    X = df3[features].values
+    y = df3[target].values
 
-        # Scale features
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, random_state=17
+    )
 
-        # Lasso regression model
+    logging.info("The dimension of X_train is {}".format(X_train.shape))
+    logging.info("The dimension of X_test is {}".format(X_test.shape))
 
-        print("\nLasso Model............................................\n")
-        lasso = Lasso(alpha=alpha)
-        lasso.fit(X_train, y_train)
-        train_score_ls = lasso.score(X_train, y_train)
-        test_score_ls = lasso.score(X_test, y_test)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
-        mse_test, mse_train = get_mse_model(lasso, X_train, y_train, X_test, y_test)
-        scores.append([datestr, train_score_ls, mse_train, test_score_ls, mse_test])
+    logging.info("Lasso Model............................................")
 
-        print("The train score for ls model is {}".format(train_score_ls))
-        print("The test score for ls model is {}".format(test_score_ls))
-        coeffs = pd.Series(lasso.coef_, features, name = "coefficient")
-        coeffs.to_csv(f"./data/figures/lasso_coeffs_{datestr}_{fut_period}_{alpha}_{resample_freq}.csv", sep = ",")
-        print(coeffs)
+    lasso = Lasso(alpha=alpha)
+    lasso.fit(X_train, y_train)
+    train_score_ls = lasso.score(X_train, y_train)
+    test_score_ls = lasso.score(X_test, y_test)
 
-        ax = coeffs.sort_values(ascending=True).plot(kind="bar")
-        ax.tick_params(axis="x", labelrotation=20)
-        fig = ax.get_figure()
-        fig.savefig(
-            f"./data/lasso_{datestr}_{fut_period}_{alpha}_{resample_freq}.png"
-        )
-        plt.close(fig)
+    mse_test, mse_train = get_mse_from_model(lasso, X_train, y_train, X_test, y_test)
+    scores = [datestr, train_score_ls, mse_train, test_score_ls, mse_test]
 
-    df_scores = pd.DataFrame(scores, columns=["date", "test_score","test_mse", "train_score", "train_mse"])
-    return df_scores
+    logging.info("The train score for ls model is {}".format(train_score_ls))
+    logging.info("The test score for ls model is {}".format(test_score_ls))
+    logging.info(".......................................................")
 
+    coeffs = pd.Series(lasso.coef_, features, name="coefficient")
+
+    return scores, coeffs
 
 if __name__ == "__main__":
-    out = train_model(fut_period=1, alpha=10, resample_freq=5)
-    s = out.to_latex(index=False)
-    print(s)
-    # input_dates = ["20190610"]
-    # input_dates = ["20190610", "20190611", "20190612", "20190613", "20190614"]
-    # for datestr in input_dates:
-    #    df1 = get_order_book_data(datestr)
-    #    # plot_hist_fig(df1)
-    #    df2 = resample_data(df1, resample_freq = 5)
-    #    df3 = feature_selection(df2, fut_period = 1)
-    #    cols = ["inv_mid_price2", "inv_mid_price","mid_price"]
-    #    # cols = ["spread_bps"]
-    #    # cols = ["returns_abs"]
-    #    #cols = ["order_imbalance"]
-    #    plot_timeseries_fig(df3, cols, datestr)
+    datestr = "20190612"
+    cols = ["inv_mid_price","mid_price"]
+    plot_timeseries_fig(datestr, cols)
