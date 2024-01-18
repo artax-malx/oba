@@ -105,8 +105,8 @@ def resample_data(df, resample_freq=5):
         resample_freq (int): raised 10 to this power and use number
                              as resample frequency.
 
-    Example: If resample_freq = 5, function wil ceilup to nearest 10_000, 
-            creating a grid spaced by 10ms
+    Example: If resample_freq = 5, function wil ceilup to nearest 100_000, 
+            creating a grid spaced by 100ms
     """
 
     df_sub = df.copy()
