@@ -102,11 +102,11 @@ def resample_data(df, resample_freq=5):
     Args:
         df (pd.DataFrame): Must have column timestamp in micros. 
 
-        resample_freq (int): raised 10 to this power and use number
-                             as resample frequency.
+        resample_freq (int): power of 10, use number for the discretization step 
 
-    Example: If resample_freq = 5, function wil ceilup to nearest 100_000, 
-            creating a grid spaced by 100ms
+    Example: If resample_freq = 5, function wil ceilup to
+             nearest 100_000 micros, creating a grid spaced 
+             by a discretization step of 100ms
     """
 
     df_sub = df.copy()
@@ -127,7 +127,8 @@ def feature_selection(df, forecast_period):
         
     Args:
         df (pd.DataFrame): orderbook data
-        forecast_period: forecast horizon for the target variable
+        forecast_period: forecast horizon for the target variable.
+                         Multiple of whatever the discretization step is
     """
     df_sub = df.copy()
     df_sub["mid_price"] = (df_sub["ap0"] + df_sub["bp0"]) / 2
@@ -168,10 +169,19 @@ def train_model(datestr, forecast_period=1, alpha=10, resample_freq=5):
 
     Args:
         datestr (str): date of the input file
-        forecast_period (int): the forcecast horizion for the target variable 
+
+        forecast_period (int): the forcecast horizion for the target variable. 
+                               Multiple of whatever the discretization step is.
+
         alpha (float): Alpha used in the Lasso regression
+
         resample_freq (int): power of ten, used to calculate 
-                             the discretization step = 10**resample_freq
+                             the discretization step = 10**(resample_freq)
+
+    Example:
+        resample_freq of 5 gives a discretization step of 100ms.
+        forecast_period of 1 means model will predict target 
+        variable 100ms into the future
     """
     df1 = get_order_book_data(datestr)
     df2 = resample_data(df1, resample_freq=resample_freq)
