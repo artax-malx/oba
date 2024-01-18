@@ -9,7 +9,7 @@ def test_resample_data():
     
     df_test = analysis.get_test_order_book_data()
 
-    df_samp  = analysis.resample_data(df_test, 2)
+    df_samp  = analysis.resample_data(df_test, resample_freq = 2)
 
     exp_index = np.array([200, 300, 400, 500, 600])
 

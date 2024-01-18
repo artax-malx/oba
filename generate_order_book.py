@@ -24,7 +24,7 @@ def main():
         df_out = pd.DataFrame.from_dict(out, orient="columns")
 
         logger.info("Wrote file to data folder")
-        df_out.to_csv(f"./data/order_book_data_{datestr}.csv", sep=",", index=False)
+        df_out.to_csv(f"./data/output/order_book_data_{datestr}.csv", sep=",", index=False)
 
 
 if __name__ == "__main__":
