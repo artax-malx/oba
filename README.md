@@ -47,3 +47,13 @@ python3 run_model.py
 
 * The Makefile contains often used commands. Make sure to set ```MY_PYTHON3``` to your python3
 interpreter
+
+### Code improvements 
+
+* In [oba.py](oba/oba.py): bid and ask sides of the orderbook are tracked in seperate sorted
+dictionaries. Should be one generic structure.
+
+* Project has a test suite, but more testing is required: unit testing and integration testing.
+
+* Code in [analysis.py](oba/analysis.py) is not generic and reusable enough, has to be more modular. This will also allow
+for a more thorough statistical analysis.
