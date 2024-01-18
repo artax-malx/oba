@@ -45,4 +45,5 @@ python3 run_model.py
 
 * When running the code a log folder is automatically created for the log files
 
-* The Makefile contains often used commands
+* The Makefile contains often used commands. Make sure to set ```MY_PYTHON3``` to your python3
+interpreter
