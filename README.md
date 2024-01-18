@@ -31,11 +31,18 @@ python3 -m pytest tests
 ```console
 python3 generate_order_book.py 
 ```
+* The main module for orderbook generation is [oba.py](oba/oba.py) 
+
+* Run the model training code with:
+```console
+python3 run_model.py 
+```
+* The main module for the model analysis is [analysis.py](oba/analysis.py) 
+
+* A detailed description of the model and analysis can be found in [analysis_report.pdf](docs/analysis_report.pdf)
 
 * All input data is in the folder [data](data) and the outputs are also written to it
 
-* When running a log folder is automatically created for the log files
-
-* The main module is [oba.py](oba/oba.py) 
+* When running the code a log folder is automatically created for the log files
 
 * The Makefile contains often used commands

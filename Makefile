@@ -9,5 +9,8 @@ test:
 orderbook:
 	$(MY_PYTHON3) generate_order_book.py
 
+model:
+	$(MY_PYTHON3) run_model.py
+
 updatereq:
 	$(MY_PYTHON3) -m pip freeze > requirements.txt
