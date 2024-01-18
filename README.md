@@ -53,7 +53,7 @@ interpreter
 * In [oba.py](oba/oba.py): bid and ask sides of the orderbook are tracked in seperate sorted
 dictionaries. Should be one generic structure.
 
-* Project has a set of test, but more testing is required and more states of the code have to be
+* Project has a set of tests, but more testing is required and more states of the code have to be
 tested, both unit testing and integration testing.
 
 * Code in [analysis.py](oba/analysis.py) is not generic and reusable enough, has to be more modular. This will also allow
