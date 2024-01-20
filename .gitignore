@@ -5,3 +5,8 @@
 *.aux
 *.log
 *.toc
+
+# Output files
+data/figures
+data/lasso_model
+data/output
