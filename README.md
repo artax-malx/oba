@@ -6,8 +6,10 @@ output for research and model fitting.
 
 Note that all code has to be run from the root directory (except for the C++ code in directory [oba](oba), which is still in development).
 
-In the folder [docs](docs) there is a pdf descibing the original assignment by which this was
+In the folder [docs](docs) there is a pdf describing the original assignment by which this was
 inspired.
+
+C++ code in [oba.cpp](oba/cpp/oba.cpp) is still in development.
 
 ### Requirements
 
